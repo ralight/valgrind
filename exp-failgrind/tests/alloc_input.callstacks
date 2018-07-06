@@ -1,0 +1,109 @@
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)
+
+# ./input
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x10869E: f_a (input.c:7)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086B5: f_a (input.c:9)
+by 0x1086E4: main (input.c:18)

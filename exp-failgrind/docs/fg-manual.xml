@@ -1,0 +1,1422 @@
+<?xml version="1.0"?> <!-- -*- sgml -*- -->
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"
+[ <!ENTITY % vg-entities SYSTEM "../../docs/xml/vg-entities.xml"> %vg-entities; ]>
+
+
+<chapter id="fg-manual" xreflabel="Failgrind: a memory allocation and syscall failure testing tool">
+<title>Failgrind: a memory allocation and syscall failure testing tool</title>
+
+<para>To use this tool, you must specify
+<option>--tool=exp-failgrind</option> on the Valgrind
+command line.</para>
+
+
+
+<sect1 id="fg-manual.overview" xreflabel="Overview">
+<title>Overview</title>
+
+<para>Failgrind is a tool for simulating heap memory allocation failures and
+system call (syscall) failures to examine how programs respond. It has been
+designed to used for testing full programs, or targetted parts of a program or
+test suite.</para>
+
+<para>Whenever a heap memory allocation request is made by a program, the tool
+examines the call stack to determine if this particular call stack has been
+seen before. If this is the first time this call stack has been seen, then
+the memory request will fail and a NULL returned. If the call stack has
+been seen before, then the memory allocation succeeds. A record of the call
+stacks that have been seen before are stored in a text file.  These records are
+loaded when the tool starts, so it is possible (and desirable) to run your
+program multiple times to inspect different memory failure paths.</para>
+
+<para>The same behaviour applies to syscalls. If the call stack associated with
+the syscall has been seen before, the syscall will return failure and set
+errno to EINVAL. Options exist for customising the error returned either
+globally or on a per-syscall basis. Syscall failures are not enabled by
+default.</para>
+
+<para>Using Failgrind successfully involves running your program many times
+until all different memory allocation or syscall call stacks that you are
+interested in have been tested. For complex programs this may only be feasible
+as part of a dedicated testing program rather than manual testing. Failgrind
+has a good range of options for controlling how the heap allocation failures
+occur, to help with testing a variety of scenarios.</para>
+
+<para>You may be able to get an idea of the scale of the testing required by
+looking at the output of a run through Memcheck - this will tell you how
+many allocations there were. As an example, testing the ssh command
+connecting successfully to a remote server took approximately 400 runs of
+Failgrind, saving nearly 3000 call stacks in the process, and making
+10000 allocations in the final run.</para>
+
+</sect1>
+
+<sect1 id="fg-manual.general-operation" xreflabel="General Operation">
+<title>General Operation</title>
+<para>This section describes the features that are common to both allocation
+and syscall failures.</para>
+
+<sect2>
+<title>Callstack files</title>
+<para>Probably the most important options are around reading and writing the
+file that contains information on what callstacks have been seen before.
+This file is key to the concept of running Failgrind multiple times on your
+program to examine behaviour through the whole program flow. By default
+Failgrind will attempt to read callstack information from the file
+<option>failgrind.callstacks</option>, then as it runs will append new
+callstacks to that file. An example callstack is shown below:</para>
+
+<screen><![CDATA[
+# ./my_program
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x1087E3: f_b (myprog.c:11)
+by 0x10886B: f_c (myprog.c:26)
+by 0x1088BC: f_a (myprog.c:38)
+by 0x108902: main (myprog.c:48)
+]]></screen>
+
+<para>This shows that the program <option>my_program</option> produced the
+callstack, and that the allocation function that failed was malloc, plus
+the callstack of functions that lead to the malloc call. Your callstack
+file will contain many of these entries when you have finished your
+testing. It is safe to remove complete callstacks from the callstack file.
+Doing so means that the next time that Failgrind runs your program, that
+particular callstack will fail again.</para>
+
+<para>It is possible for Failgrind to use separate callstack files
+when reading and writing. This is done with the
+<option>--callstack-input</option> and <option>--callstack-output</option>
+options. Both of these options can be used to specify a file, for example:
+<option>--callstack-input=test1.callstacks</option>. It is safe to have the
+input and output point to the same file, or to have them be different
+files. It is also possible to have reading or writing of callstacks
+disabled by setting either of these examples to no, for example:
+<option>--callstack-input=test1.callstacks --callstack-output=no</option>.
+This would read callstacks from the test1.callstacks file, but not write
+any new callstack output. These techniques allow you to use a reference
+callstack file as an input which is never modified, and an output file
+which is then examined or discarded depending on your needs.</para>
+
+<para>The final callstack file option is
+<option>--write-callstacks-at-end</option>, which can be set to yes or no.
+When at the default value of no, each new callstack will be appended to the
+callstack file immediately. When set to yes, the callstack output file will
+be created as a new file when Failgrind exits. Use of this option can
+produce some different behaviour when combined with gdb or Client
+Requests.</para>
+</sect2>
+
+<sect2>
+<title>Results display</title>
+<para>Failgrind has two options to control its output. The first is
+<option>--show-failed</option>, which defaults to no. If set to yes, then
+each time a new failure occurs the callstack will be printed to the screen
+as well as to the callstack file. The second option is
+<option>--failgrind-stats</option>, which defaults to yes. This shows a
+brief summary of some relevant counters:</para>
+
+<screen><![CDATA[
+ Failgrind: 0 call stacks loaded from file
+            0 allocations succeeded
+            0 allocations failed
+            0 new allocation callstacks found
+            0 syscalls succeeded
+            0 syscalls failed
+            0 new syscall callstacks found
+]]></screen>
+
+<para>You can use this information to determine whether your testing is
+complete. If "X failed" is 0, and "new X callstacks found" is 0, then there
+are no other paths to be found, assuming the same program behaviour on each
+program run. It is possible to automate this technique using the client
+requests as described in <xref linkend="fg-manual.clientrequests.example"/>.</para>
+</sect2>
+
+<sect2>
+<title>Randomness</title>
+<para>Both of the allocation and syscall failure methods have options which
+allow failures to happen randomly (<option>--alloc-fail-chance</option> and
+<option>--syscall-fail-chance</option>). If you are using either of these
+options, then it is possible to get reproduceable results using the
+<option>--seed</option>, for example: <option>--seed=12345</option>.</para>
+</sect2>
+</sect1>
+
+
+<sect1 id="fg-manual.allocation.failures" xreflabel="Allocation Failures">
+<title>Allocation Failures</title>
+<para>This section describes using Failgrind to test program behaviour in the
+presence of heap memory allocation failures.</para>
+
+<sect2>
+<title>Controlling Allocation Failures</title>
+<para>Failgrind has a range of options for controlling when allocation failures
+can occur. The default behaviour is to fail every allocation attempt the
+first time it is seen. All of the options described below can be combined.</para>
+
+<sect3>
+<title>Toggle Functions and Start Behaviour</title>
+<para>Probably the most useful control option is
+<option>--alloc-toggle</option>. This allows you to specify a function
+where the global allocation failure switch will be toggled on entry and
+exit from the function. This provides a straightforward way of isolating
+Failgrind to only testing the parts of your program that you are interested
+in. If you use a toggle function, then Failgrind will start with allocation
+failures disabled. This means if you specify
+<option>--alloc-toggle=test_suite</option>, then all code prior to
+test_suite() will run as normal, the the code inside test_suite() will run
+with allocation failures enabled, and finally all code after test_suite()
+will run as normal. Global allocation failures can be enabled/disabled at the
+start of Failgrind using <option>--alloc-fail-atstart</option>, which can
+be set to yes or no.</para>
+
+<para>The same functionality can be obtained in a more programmatic manner
+through the use of <xref linkend="fg-manual.monitor-commands"/> or
+<xref linkend="fg-manual.clientrequests"/>).</para>
+</sect3>
+
+<sect3>
+<title>Allocation Size</title>
+<para>Allocations failures can be controlled based on the size of allocation
+being made. This is controlled by the
+<option>--alloc-threshold-high</option> and
+<option>--alloc-threshold-low</option> options, which specify high and low
+thresholds in bytes respectively. For example:</para>
+
+<para>All allocations larger than 100 bytes will always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-high=100 ./my_prog
+]]></screen>
+</para>
+
+<para>All allocations smaller than 10 bytes will always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-low=10 ./my_prog
+]]></screen>
+</para>
+
+<para>All allocations larger than 100 bytes and smaller than 10 bytes will
+always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-high=100 --alloc-threshold-low=10 ./my_prog
+]]></screen>
+</para>
+
+<para>The sense of the thresholds can be inverted with
+<option>--alloc-threshold-invert=yes</option>. Only really makes sense when
+specifying both a high and low threshold. For example:</para>
+
+<para>All allocations smaller than 100 bytes will always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-high=100 --alloc-threshold-invert ./my_prog
+]]></screen>
+</para>
+
+<para>All allocations larger than 10 bytes will always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-low=10 --alloc-threshold-invert ./my_prog
+]]></screen>
+</para>
+
+<para>All allocations greater than 10 bytes and smaller than 100 bytes will
+always succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-threshold-high=100 --alloc-threshold-low=10 --alloc-threshold-invert ./my_prog
+]]></screen>
+</para>
+
+</sect3>
+
+<sect3>
+<title>Allowing Specific Memory Allocation Functions</title>
+
+<para>If you wish to have a memory allocation function always succeed
+regardless of other options, use the <option>--alloc-allow</option> option.
+This can be specified multiple times. For example if you are not interested in
+failing strdup():</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-allow=strdup ./my_prog
+]]></screen>
+</sect3>
+
+<sect3>
+<title>Allocation Count</title>
+<para>The number of allocation failures in a Failgrind run can be limited using
+the <option>--alloc-max-fails</option> option, which is an integer. It can
+sometimes be useful to limit to a single allocation per run, at the cost of
+increasing the number of runs that are needed:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-max-fails=1 ./my_prog
+]]></screen>
+</sect3>
+
+<sect3>
+<title>Randomness</title>
+<para>The <option>--alloc-fail-chance</option> option allows allocation
+failures to happen randomly. Set to an integer value 1-100 that represents
+the percentage chance an allocation that is due to be rejected (that hasn't
+been seen before and meets all other criteria) will actually fail. Use with
+the <option>--seed</option> to get reproduceable but random tests. When you
+use <option>--alloc-fail-chance</option>, the seed being used is displayed
+by Failgrind on start. For example, to fail 50% of the time:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-fail-chance=50 ./my_prog
+
+==15526== Failgrind, a memory allocation and syscall failure testing tool
+==15526== NOTE: This is an Experimental-Class Valgrind Tool
+==15526== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==15526== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+==15526== Command: ./my_prog
+==15526==
+==15526== Using random seed: 7937841
+...
+]]></screen>
+</sect3>
+
+</sect2>
+
+<sect2 id="fg-manual.debugging.a.complete.program" xreflabel="Debugging a Complete Program">
+<title>Debugging a Complete Program </title>
+
+<para>This method of testing requires no modification to your program and
+provides the opportunity to have full testing coverage.</para>
+
+<para>For this type of debugging, the most important options are
+<option>--callstack-input</option> and <option>--callstack-output</option>,
+which control where the in-memory list of call stacks that have been seen
+are read from or stored to, which is important for running Failgrind over
+multiple runs.</para>
+
+<para>You should also look at the wide variety of options for controlling
+Failgrind at <xref linkend="fg-manual.options"/>.</para>
+
+<sect3>
+<title>Simple Example</title>
+
+<para>A trivial program:</para>
+
+<programlisting><![CDATA[
+ 1      #include <stdio.h>
+ 2      #include <stdlib.h>
+ 3
+ 4      void func_A(void)
+ 5      {
+ 6          int *ptr1;
+ 7
+ 8          ptr1 = malloc(10);
+ 9          if(!ptr1){
+10              return;
+11          }
+12      }
+13
+14      int main(int argc, char *argv[])
+15      {
+16          func_A();
+17      }
+]]></programlisting>
+
+<para>Running through Failgrind for the first time, and using the
+<option>--show-failed=yes</option> option produces the following
+output:</para>
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --show-failed=yes ./test
+==17460== Failgrind, a memory allocation failure testing tool
+==17460== NOTE: This is an Experimental-Class Valgrind Tool
+==17460== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==17460== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+==17460== Command: ./test
+==17460==
+==17460==    at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+==17460==    by 0x10865B: func_A (test.c:8)
+==17460==    by 0x10867A: main (test.c:16)
+==17460==
+==17460==
+--17460--  Failgrind: 0 call stacks loaded from file
+--17460--             0 allocations succeeded
+--17460--             1 allocations failed
+--17460--             1 new allocation callstacks found
+--17460--             0 syscalls succeeded
+--17460--             0 syscalls failed
+--17460--             0 new syscall callstacks found
+--17460--
+]]></screen>
+
+<para>This is as expected - the single call to malloc has failed, and the stack
+trace tells us where it was. We can see that the callstack file was empty
+because no call stacks were loaded.</para>
+
+<para>Running a second time:</para>
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --show-failed=yes ./test
+==17461== Failgrind, a memory allocation failure testing tool
+==17461== NOTE: This is an Experimental-Class Valgrind Tool
+==17461== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==17461== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+==17461== Command: ./test
+==17461==
+==17461==
+--17461--  Failgrind: 1 call stacks loaded from file
+--17461--             1 allocations succeeded
+--17461--             0 allocations failed
+--17461--             0 new allocation callstacks found
+--17461--             0 syscalls succeeded
+--17461--             0 syscalls failed
+--17461--             0 new syscall callstacks found
+--17461--
+]]></screen>
+
+<para>This shows a single call stack was loaded from the callstack file, and
+that our allocation matches that call stack because the allocation
+succeeded.</para>
+</sect3>
+
+<sect3>
+<title>Example causing a segfault</title>
+
+<para>A possible outcome of memory failures is that the program being tested
+segfaults. The listing below extends our program to add a second memory
+allocation that isn't checked for success, then attempts to write to that
+memory.</para>
+
+<programlisting><![CDATA[
+ 1      #include <stdlib.h>
+ 2
+ 3      void func_A(void)
+ 4      {
+ 5          int *ptr1;
+ 6          int *ptr2;
+ 7
+ 8          ptr1 = malloc(10);
+ 9          if(!ptr1){
+10              return;
+11          }
+12
+13          ptr2 = malloc(10);
+14          ptr2[5] = 1;
+15      }
+16
+17      int main(int argc, char *argv[])
+18      {
+19          func_A();
+20      }
+]]></programlisting>
+
+<para>Before the testing begins again, the failgrind.callstacks file is removed
+to give a fresh start with no old callstacks.  The first run of the program
+is identical to the previous first run. Running Failgrind a second time,
+this time using the default options (i.e. the failed allocation call stacks
+are not being printed) produces:</para>
+
+<screen><![CDATA[
+==17619== Failgrind, a memory allocation failure testing tool
+==17619== NOTE: This is an Experimental-Class Valgrind Tool
+==17619== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==17619== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+==17619== Command: ./a.out
+==17619==
+==17619==
+==17619== Process terminating with default action of signal 11 (SIGSEGV)
+==17619==  Access not within mapped region at address 0x14
+==17619==    at 0x10867D: func_A (test.c:14)
+==17619==    by 0x10869B: main (test.c:19)
+==17619==  If you believe this happened as a result of a stack
+==17619==  overflow in your program's main thread (unlikely but
+==17619==  possible), you can try to increase the size of the
+==17619==  main thread stack using the --main-stacksize= flag.
+==17619==  The main thread stack size used in this run was 8388608.
+==17619==
+--17619--  Failgrind: 1 call stacks loaded from file
+--17619--             1 allocations succeeded
+--17619--             1 allocations failed
+--17619--             1 new allocation callstacks found
+--17619--             0 syscalls succeeded
+--17619--             0 syscalls failed
+--17619--             0 new syscall callstacks found
+--17619--
+Segmentation fault (core dumped)
+]]></screen>
+
+<para>As expected, the write to the invalid pointer from the unchecked
+allocation causes a crash. We can see where the crash occurred, but that
+doesn't necessarily tell us where the allocation failure was. In this
+example, only one allocation failed, so we know this must be the allocation
+that caused the crash, and it will be the final entry in the callstack
+file:</para>
+
+<screen><![CDATA[
+# ./test
+at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+by 0x108670: func_A (test.c:13)
+by 0x10869B: main (test.c:19)
+]]></screen>
+
+<para>It is possible to repeat a test by removing call stacks from the
+callstack file. In this case, removing the final call stack effectively
+restores our testing environment to as it was before the current test.</para>
+
+<para>As well as examining the call stack file to see allocation failures, it
+is also possible to have callstacks printed to the screen each time a
+failure occurs, as was seen earlier. This is enabled using
+<option>--show-failed=yes</option>, and produces an output like
+below:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --show-failed=yes ./a.out
+==17674== Failgrind, a memory allocation failure testing tool
+==17674== NOTE: This is an Experimental-Class Valgrind Tool
+==17674== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==17674== Using Valgrind-3.16.1 *and LibVEX; rerun with -h for copyright info
+==17674== Command: ./a.out
+==17674==
+==17674==    at 0x4C2E08B: malloc (vg_replace_malloc.c:299)
+==17674==    by 0x108670: func_A (test.c:13)
+==17674==    by 0x10869B: main (test.c:19)
+...
+]]></screen>
+
+</sect3>
+</sect2>
+
+
+<sect2>
+<title>Debugging Parts of a Program</title>
+
+<para>Debugging your program in parts allows more targetted testing, such as
+testing parts of the program that are known to have changed or as part of a
+test suite.</para>
+
+<sect3>
+<title>Simple Method</title>
+
+<para>The most straightforward method of controlling which parts of your
+program are tested, is through the <option>--alloc-fail-atstart</option> and
+<option>--alloc-toggle</option> options. By default, as soon as Failgrind
+starts it will begin rejecting heap memory allocations. Using
+<option>--alloc-fail-atstart=no</option>, no memory allocations will be
+rejected until allocation failures are re-enabled. To enable allocation
+failures you can use a gdb monitor command, a client request, as described in
+<xref linkend="fg-manual.monitor-commands"/> and <xref
+	linkend="fg-manual.clientrequests"/>,, or tell Failgrind to enable itself
+automatically using the <option>--alloc-toggle</option> option. This option,
+which can be repeated in order to specify multiple functions, causes Failgrind
+to toggle the enabled/disabled state when a named function is entered and left.
+For example, running a program <option>prog</option> as follows:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-toggle=run_test1 --alloc-toggle=run_test2 prog
+]]></screen>
+
+<para>The program listing:</para>
+<programlisting><![CDATA[
+ 1      #include <failgrind.h>
+ 2      #include <test_funcs.h>
+ 3
+ 4      int main(int argc, char* argv[])
+ 5      {
+ 6         setup_test_suite();
+ 7
+ 8         run_test1();
+ 9
+10         run_test2();
+11
+12         cleanup_test_suite();
+13         return 0;
+14      }
+]]></programlisting>
+
+<para>When <option>--alloc-toggle</option> is in use,
+<option>--alloc-fail-atstart</option> defaults to <option>no</option>, so
+Failgrind starts off disabled. The setup of the test (the setup_test_suite()
+function) is carried out with no memory allocations being rejected. The
+<option>--alloc-toggle=run_test1</option> option means that when run_test1() is
+entered, the enabled/disabled state will be toggled - so during the execution
+of this function memory allocation failures are enabled - then after it is left
+they will be disabled again. The same is true for run_test2().</para>
+</sect3>
+
+<sect3>
+<title>Advanced Methods</title>
+
+<para>If you need more control than is possible with the simple toggle option,
+then you should look into monitor commands or client requests (see
+<xref linkend="fg-manual.monitor-commands"/> or
+<xref linkend="fg-manual.clientrequests"/>) where it is possible to
+enable/disable Failgrind, reset its state and other capabilities.</para>
+</sect3>
+</sect2>
+</sect1>
+
+<sect1 id="fg-manual.syscall.failures" xreflabel="Syscall Failures">
+<title>Syscall Failures</title>
+<para>This section describes using Failgrind to test program behaviour in the
+presence of syscall failures.</para>
+
+<para>Syscall failures are a bit trickier to deal with than allocations,
+so the default Failgrind behaviour is to not fail syscalls.</para>
+
+<para>Note that some syscalls never return an error and have been set to always succeed in Failgrind. This currently includes:
+
+<screen>alarm exit exit_group getegid geteuid getgid getpgrp getpid getppid gettid getuid sched_yield set_tid_address sync umask</screen>
+</para>
+
+<sect2>
+<title>Controlling Syscall Failures</title>
+<para>Failgrind has a range of options for controlling when syscall failures
+can occur. All of the options described below can be combined.</para>
+
+<sect3>
+<title>Toggle Functions and Start Behaviour</title>
+<para>Probably the most useful control option is
+<option>--syscall-toggle</option>. This allows you to specify a function
+where the global syscall failure switch will be toggled on entry and
+exit from the function. This provides a straightforward way of isolating
+Failgrind to only testing the parts of your program that you are interested
+in. If you specify <option>--syscall-toggle=test_suite</option>, then all code prior to
+test_suite() will run as normal, the the code inside test_suite() will run
+with syscall failures enabled, and finally all code after test_suite()
+will run as normal. Global syscall failures can be enabled/disabled at the
+start of Failgrind using <option>--syscall-fail-atstart</option>, which can
+be set to yes or no.</para>
+
+<para>The same functionality can be obtained in a more programmatic manner
+through the use of <xref linkend="fg-manual.monitor-commands"/> or
+<xref linkend="fg-manual.clientrequests"/>).</para>
+</sect3>
+
+<sect3>
+<title>Setting Error Values</title>
+<para>By default, Failgrind will have all syscalls fail with errno EINVAL. This
+can be changed globally or per-syscall. Use
+<option>--syscall-errno=&lt;error&gt;</option> to set the error value to
+use for all syscalls. Use
+<option>--syscall-errno=&lt;function&gt;,&lt;error&gt;</option> to set an
+error to be used for a particular syscall. For example:</para>
+
+<para>All syscalls will fail with EINTR:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-atstart=yes --syscall-errno=EINTR ./my_prog
+]]></screen>
+</para>
+
+<para>All syscalls will fail with EINVAL, except for open(), which will fail
+with EACCES:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-atstart=yes --syscall-errno=open,EACCES ./my_prog
+]]></screen>
+</para>
+
+<para>All syscalls will fail with EINTR, except for open(), which will fail
+with EACCES:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-atstart=yes --syscall-errno=EINTR --syscall-errno=open,EACCES ./my_prog
+]]></screen>
+</para>
+
+<para>A further option <option>--syscall-specified-only</option>, which can be
+set to yes or no and defaults to no. If set to yes, then only functions
+that have been configured with
+<option>--syscall-errno=&lt;function&gt;,&lt;error&gt;</option> will fail.
+This allows targetted testing of particular syscalls. For example:</para>
+
+<para>Calls to open() will fail with EACCES, all other syscalls will succeed:
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-atstart=yes --syscall-errno=open,EACCES --specified-only=yes ./my_prog
+]]></screen>
+</para>
+</sect3>
+
+<sect3>
+<title>Allowing Specific Syscalls</title>
+
+<para>If you wish to have a syscall always succeed regardless of other options,
+use the <option>--syscall-allow</option> option. This can be specified
+multiple times. This option is particularly useful if you are using
+printf() for debugging and always want it to succeed by allowing the
+<option>write</option> syscall. For example:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-atstart=yes --syscall-allow=write ./my_prog
+]]></screen>
+</sect3>
+
+
+<sect3>
+<title>Syscall Count</title>
+<para>The number of syscall failures in a Failgrind run can be limited using
+the <option>--syscall-max-fails</option> option, which is an integer. It can
+sometimes be useful to limit to a single syscall per run, at the cost of
+increasing the number of runs that are needed:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-max-fails=1 ./my_prog
+]]></screen>
+</sect3>
+
+<sect3>
+<title>Randomness</title>
+<para>The <option>--syscall-fail-chance</option> option allows syscall
+failures to happen randomly. Set to an integer value 1-100 that represents
+the percentage chance an syscall that is due to be rejected (that hasn't
+been seen before and meets all other criteria) will actually fail. Use with
+the <option>--seed</option> to get reproduceable but random tests. When you
+use <option>--syscall-fail-chance</option>, the seed being used is displayed
+by Failgrind on start. For example, to fail 50% of the time:</para>
+
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --syscall-fail-chance=50 ./my_prog
+
+==15526== Failgrind, a memory allocation and syscall failure testing tool
+==15526== NOTE: This is an Experimental-Class Valgrind Tool
+==15526== Copyright (C) 2018-2021, and GNU GPL'd, by Roger Light.
+==15526== Using Valgrind-3.16.1 and LibVEX; rerun with -h for copyright info
+==15526== Command: ./my_prog
+==15526==
+==15526== Using random seed: 7937841
+...
+]]></screen>
+</sect3>
+
+</sect2>
+
+</sect1>
+
+<sect1 id="fg-manual.options" xreflabel="Failgrind Command-line Options">
+<title>Failgrind Command-line Options</title>
+
+<para>Failgrind-specific command-line options are:</para>
+
+<!-- start of xi:include in the manpage -->
+<variablelist id="fg.opts.list">
+
+  <varlistentry id="opt.alloc-allow" xreflabel="--alloc-allow">
+    <term>
+      <option><![CDATA[--alloc-allow=<function> ]]></option>
+    </term>
+    <listitem>
+      <para>Use this option to allow the named memory allocation function to
+      succeed regardless of what other settings are being used. Can be
+      specified multiple times.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-fail-atstart" xreflabel="--alloc-fail-atstart">
+    <term>
+      <option><![CDATA[--alloc-fail-atstart=yes|no [default: yes] ]]></option>
+    </term>
+    <listitem>
+      <para>Control whether memory allocation will start to fail immediately
+      that the program being tested is launched. Defaults to
+      <option>no</option> when <option>--alloc-toggle</option> is in
+      use.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-fail-chance" xreflabel="--alloc-fail-chance">
+    <term>
+      <option><![CDATA[--alloc-fail-chance=<number> [default: 100] ]]></option>
+    </term>
+    <listitem>
+      <para>The default operation of Failgrind is to reject all memory
+      allocations when a call stack is seen for the first time. Set this
+      option to 1-100 to act as the percentage chance that an allocation
+      that is due to be rejected will actually be rejected. Using this
+      option makes your testing non-deterministic.</para>
+      <para>See also the <option>--seed</option> option.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-max-fails" xreflabel="--alloc-max-fails">
+    <term>
+      <option><![CDATA[--alloc-max-fails=<number> [default: 0 (unlimited)] ]]></option>
+    </term>
+    <listitem>
+        <para>By default, any number of failures is possible in a single
+        Failgrind run. The <option>--alloc-max-fails</option> option allows you
+        to tweak this behaviour. Setting this to a positive integer n means
+        that only the first n times that Failgrind would reject a memory
+        allocation will actually be rejected. After the number of failures
+        reaches this limit, any further allocations that would otherwise have
+        failed will succeed and they will not be recorded in the callstack file
+        so a subsequent run may trigger them to fail.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-threshold-high" xreflabel="--alloc-threshold-high">
+    <term>
+      <option><![CDATA[--alloc-threshold-high=<bytes> ]]></option>
+    </term>
+    <listitem>
+      <para>If set, allocations larger than "bytes" will never be failed.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-threshold-invert" xreflabel="--alloc-threshold-invert">
+    <term>
+      <option><![CDATA[--alloc-threshold-invert=yes|no [default: no] ]]></option>
+    </term>
+    <listitem>
+      <para>Invert the sense of <option>--alloc-threshold-high</option> and
+      <option>--alloc-threshold-low</option>. This means that only
+      allocations smaller than "high" and larger than "low" will be
+      failed.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-threshold-low" xreflabel="--alloc-threshold-low">
+    <term>
+      <option><![CDATA[--alloc-threshold-low=<bytes> ]]></option>
+    </term>
+    <listitem>
+      <para>If set, allocations smaller than "bytes" will never be failed.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.alloc-toggle" xreflabel="--alloc-toggle">
+    <term>
+      <option><![CDATA[--alloc-toggle=<function>]]></option>
+    </term>
+    <listitem>
+      <para>This option allows you to specify functions where the behaviour of
+      Failgrind will be toggled on entry to and exit from that function. This
+      means you can control which parts of your program are being tested by
+      Failgrind.</para> <para>For example, if you were running a test suite
+      with some setup, you might not want the setup to run under Failgrind.
+      Using <option>--alloc-fail-atstart=no</option> would start Failgrind with
+      heap allocation failures disabled, and using
+      <option>--alloc-toggle=test_suite</option> would enable allocation
+      failures when entering the function test_suite(), then disable them when
+      returning.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.callstack-input" xreflabel="--callstack-input">
+    <term>
+      <option><![CDATA[--callstack-input=no|<filename> [default: failgrind.callstacks] ]]></option>
+    </term>
+    <listitem>
+      <para>This file contains details of call stacks that should always be
+      allowed to succeed, such as those recorded from a previous run of
+      Failgrind. The contents will be loaded when Failgrind starts.</para>
+      <para>Set to "no" to disable loading of callstacks.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.callstack-output" xreflabel="--callstack-output">
+    <term>
+      <option><![CDATA[--callstack-output=no|<filename> [default: failgrind.callstacks] ]]></option>
+    </term>
+    <listitem>
+      <para>When Failgrind causes a memory allocation to fail, it will keep track
+      of the call stack in memory and write it to this file, so that it can be used
+      in a subsequent Failgrind run.</para>
+      <para>Set to "no" to disable loading of callstacks.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.failgrind-stats" xreflabel="--failgrind-stats">
+    <term>
+      <option><![CDATA[--failgrind-stats=yes|no [default: yes] ]]></option>
+    </term>
+    <listitem>
+      <para>At the end of the run, Failgrind presents some simple
+      information on the number of call stacks loaded from the callstack file,
+      the number of allocations that succeeded, and the number of allocations
+      that were made to fail. This can be disabled by setting
+      <varname>--failgrind-stats</varname> to no.</para>
+    </listitem>
+  </varlistentry>
+
+
+  <varlistentry id="opt.seed" xreflabel="--seed">
+    <term>
+      <option><![CDATA[--seed=<number>]]></option>
+    </term>
+    <listitem>
+      <para>If <option>--alloc-fail-chance</option> or
+      <option>--syscall-fail-chance</option> is set to less than 100,
+      then this option allows you to specify the seed for the valgrind
+      random number generator, which allows runs of your program to be
+      repeated exactly the same way multiple times. If not specified,
+      then a seed will be generated based on the valgrind process ID. The
+      seed being used will be printed to screen when Failgrind starts and
+      <option>--alloc-fail-chance</option> or
+      <option>--syscall-fail-chance</option> is less than 100.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.show-failed" xreflabel="--show-failed">
+    <term>
+      <option><![CDATA[--show-failed=yes|no [default: no] ]]></option>
+    </term>
+    <listitem>
+      <para>If this option is set to yes, then each time a memory allocation or
+      syscall is denied, a call stack will be printed to the screen.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-allow" xreflabel="--syscall-allow">
+    <term>
+      <option><![CDATA[--syscall-allow=<function> ]]></option>
+    </term>
+    <listitem>
+      <para>Use this option to allow the named syscall to succeed regardless
+      of what other settings are being used. This is particularly useful
+      when debugging using printf, for example, to ensure that the
+      "write" syscall always succeeds. Can be specified multiple
+      times.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-fail-atstart" xreflabel="--syscall-fail-atstart">
+    <term>
+      <option><![CDATA[--syscall-fail-atstart=yes|no [default: no] ]]></option>
+    </term>
+    <listitem>
+      <para>Control whether syscalls will start to fail immediately
+      that the program being tested is launched. Defaults to
+      <option>no</option>.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-fail-chance" xreflabel="--syscall-fail-chance">
+    <term>
+      <option><![CDATA[--syscall-fail-chance=<number> [default: 100] ]]></option>
+    </term>
+    <listitem>
+      <para>The default operation of Failgrind is to reject all syscalls
+      when a call stack is seen for the first time, if enabled. Set this
+      option to 1-100 to act as the percentage chance that a syscall
+      that is due to be rejected will actually be rejected. Using this
+      option makes your testing non-deterministic.</para>
+      <para>See also the <option>--seed</option> option.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-errno" xreflabel="--syscall-errno">
+    <term>
+      <option><![CDATA[--syscall-errno=<error> ]]></option>
+      <option><![CDATA[--syscall-errno=<function>,<error> ]]></option>
+    </term>
+    <listitem>
+      <para>This option allows you to control the error returned from
+      syscalls instead of the default value of EINVAL. There are two
+      forms for this argument. The first is
+      <option>--syscall-errno=&lt;errno&gt;</option>. This changes the
+      "global" error value used for all syscalls unless otherwise
+      specified. The second form of this argument is
+      <option>--syscall-errno=&lt;function&gt;,&lt;errno&gt;</option>.
+      This allows the error to be used for a particular syscall. For
+      example, you may wish to check how your use of the open() call
+      copes with a "permission denied" error:
+      <option>--syscall-errno=open,EACCES</option>.</para>
+
+      <para>Use in conjunction with <option>--syscall-specified-only</option>
+      to restrict your syscall failure testing to specific syscalls.</para>
+
+      <para>A platform specific list of errors supported is given in
+      <xref linkend="fg-manual.errnos"/>.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-max-fails" xreflabel="--syscall-max-fails">
+    <term>
+      <option><![CDATA[--syscall-max-fails=<number> [default: 0 (unlimited)] ]]></option>
+    </term>
+    <listitem>
+      <para>By default, any number of failures is possible in a single Failgrind
+      run. The <option>--syscall-max-fails</option> option allows you to tweak
+      this behaviour. Setting this to a positive integer n means that only the
+      first n times that Failgrind would reject a syscall will actually be
+      rejected. After the number of failures reaches this limit, any further
+      syscalls that would otherwise have failed will succeed and they will not
+      be recorded in the callstack file so a subsequent run may trigger them to
+      fail.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-specified-only" xreflabel="--syscall-specified-only">
+    <term>
+      <option><![CDATA[--syscall-specified-only=yes|no [default: no] ]]></option>
+    </term>
+    <listitem>
+      <para>Setting this option to yes means that only syscalls that are specified with
+      <option>--syscall-errno=&lt;function&gt;,&lt;errno&gt;</option> will
+      be considered for failure. If this option is set to no, then
+      functions specified with <option>--syscall-errno</option> will be
+      failed with their specific error and all other syscalls will be
+      failed with the "global" error, which defaults to EINVAL, but that
+      can also be changed with <option>--syscall-errno</option>.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.syscall-toggle" xreflabel="--syscall-toggle">
+    <term>
+      <option><![CDATA[--syscall-toggle=<function>]]></option>
+    </term>
+    <listitem>
+      <para>This option allows you to specify functions where the behaviour of
+      Failgrind will be toggled on entry to and exit from that function. This
+      means you can control which parts of your program are being tested by
+      Failgrind.</para> <para>For example, if you were running a test suite with
+      some setup, you might not want the setup to run under Failgrind.  Using
+      <option>--syscall-fail-atstart=no</option> would start Failgrind with
+      syscall failures disabled, and using
+      <option>--syscall-toggle=test_suite</option> would enable syscall failures
+      when entering the function test_suite(), then disable them when
+      returning.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="opt.write-callstacks-at-end" xreflabel="--write-callstacks-at-end">
+    <term>
+      <option><![CDATA[--write-callstacks-at-end=yes|no [default: no]]]></option>
+    </term>
+    <listitem>
+      <para>Set to yes to write the callstack output file when Failgrind
+      exits. This creates a new file and only contains the callstacks
+      that are currently in memory. Set to no to have each new callstack
+      appended to the output file immediately. This produces a file that
+      contains every callstack seen by Failgrind, and may contain
+      duplicates if the <option>alloc_clear</option> monitor option, or
+      <option>FAILGRIND_ALLOC_CLEAR</option> client request is used for
+      example.</para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+<!-- end of xi:include in the manpage -->
+
+</sect1>
+
+<sect1 id="fg-manual.monitor-commands" xreflabel="Failgrind Monitor Commands">
+<title>Failgrind Monitor Commands</title>
+
+<para>The Failgrind tool provides monitor commands handled by the Valgrind
+gdbserver (see <xref linkend="manual-core-adv.gdbserver-commandhandling"/>).
+</para>
+
+<itemizedlist>
+  <listitem>
+    <para><varname>alloc_fail [on|off]</varname> get or set (if on/off given)
+    whether memory allocation failures are enabled.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>callstack_append &lt;file&gt;</varname> will cause the
+    in-memory list of call stacks to be written to <option>file</option>.
+    Appends to an existing file.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>callstack_clear</varname> will clear the in-memory list of
+    call stacks that have been seen. This means that if any of these call
+    stacks are seen again, the allocation or syscall will be rejected by
+    Failgrind.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>callstack_read &lt;file&gt;</varname> will read the
+    file of stored call stacks into memory. Call stacks already
+    in memory will not be affected.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>callstack_write &lt;file&gt;</varname> will cause the
+    in-memory list of call stacks to be written to <option>file</option>.
+    Creates a new file. This may be useful if you have configured Failgrind
+    to not write an output file for your run.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>print_stats</varname> requests that the heap allocation
+    success/failure counts are printed to the gdb monitor, then zeros them.
+    These counts are only updated when heap memory allocation failure is
+    enabled, i.e. Failgrind is operating as normal.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>syscall_fail [on|off]</varname> get or set (if on/off given)
+    whether syscall failures are enabled.</para>
+  </listitem>
+
+  <listitem>
+    <para><varname>zero_stats</varname> sets the heap allocation
+    success/failure counts to 0.</para>
+  </listitem>
+</itemizedlist>
+
+</sect1>
+
+<sect1 id="fg-manual.clientrequests" xreflabel="Client request reference">
+<title>Failgrind specific client requests</title>
+
+<sect2 id="fg-manual.clientrequests.list" xreflabel="Client request list">
+<title>Client request list</title>
+
+<para>Failgrind provides the following specific client requests in
+<filename>failgrind.h</filename>.</para>
+
+<variablelist id="fg.clientrequests.list">
+
+  <varlistentry id="fg.alloc-fail-on" xreflabel="FAILGRIND_ALLOC_FAIL_ON">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_FAIL_ON</computeroutput>
+    </term>
+    <listitem>
+      <para>Enable heap allocation failures. This is the default mode of
+      operation for Failgrind. Use in conjunction with
+      <option>--alloc-fail-atstart</option> to control which parts of your
+      program are tested by Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.alloc-fail-off" xreflabel="FAILGRIND_ALLOC_FAIL_OFF">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_FAIL_OFF</computeroutput>
+    </term>
+    <listitem>
+      <para>Disable heap allocation failures. When you have used this
+      request, Failgrind will not influence any memory
+      allocations.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.alloc-fail-toggle" xreflabel="FAILGRIND_ALLOC_FAIL_TOGGLE">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_FAIL_TOGGLE</computeroutput>
+    </term>
+    <listitem>
+      <para>Toggle the enabled/disabled state of heap allocation
+      failures.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.alloc-get-fail-count" xreflabel="FAILGRIND_ALLOC_GET_FAIL_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_GET_FAIL_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of heap memory allocations that have been failed
+      by Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.alloc-get-new-callstack-count" xreflabel="FAILGRIND_ALLOC_GET_NEW_CALLSTACK_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_GET_NEW_CALLSTACK_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of heap memory allocation callstacks that have
+      not been seen before. In the normal mode of operation this will be
+      the same as
+      <option>FAILGRIND_ALLOC_GET_NEW_CALLSTACK_COUNT</option>. If you use
+      <option>--alloc-fail-chance</option> or <option>--alloc-max-fails</option> then
+      this tells you the number of allocations that could have been
+      failed, but may not have been. For example, if you decide to set
+      <option>--alloc-max-fails</option>, then run a program that makes three
+      different memory allocations, you would expect
+      <option>FAILGRIND_ALLOC_GET_FAIL_COUNT=1</option> and
+      <option>FAILGRIND_ALLOC_GET_NEW_CALLSTACK_COUNT=3</option>. If this
+      client request returns 0, you know that all memory allocations have
+      been seen before for this particular test.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.alloc-get-success-count" xreflabel="FAILGRIND_ALLOC_GET_SUCCESS_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_ALLOC_GET_SUCCESS_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of heap memory allocations that have succeeded
+      through Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.callstack-append" xreflabel="FAILGRIND_CALLSTACK_APPEND">
+    <term>
+      <computeroutput>FAILGRIND_CALLSTACK_APPEND("file")</computeroutput>
+    </term>
+    <listitem>
+      <para>Write the in-memory list of stored call stacks to a file. This
+      appends to an existing file.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.callstack-clear" xreflabel="FAILGRIND_CALLSTACK_CLEAR">
+    <term>
+      <computeroutput>FAILGRIND_CALLSTACK_CLEAR</computeroutput>
+    </term>
+    <listitem>
+      <para>Clear the in-memory list of stored call stacks (i.e. after making
+      this request, if a call stack that had been seen before is seen
+      again, it will fail again). If you use this request and have Failgrind
+      configured to write callstacks to a file, then you will get duplicate
+      entries unless you use the <option>--write-callstacks-at-end=yes</option>
+      command line argument.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.callstack-read" xreflabel="FAILGRIND_CALLSTACK_READ">
+    <term>
+      <computeroutput>FAILGRIND_CALLSTACK_READ("file")</computeroutput>
+    </term>
+    <listitem>
+      <para>Read a file of stored call stacks into memory. This will append the
+      call stacks to those that are currently loaded.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.callstack-write" xreflabel="FAILGRIND_CALLSTACK_WRITE">
+    <term>
+      <computeroutput>FAILGRIND_CALLSTACK_WRITE("file")</computeroutput>
+    </term>
+    <listitem>
+      <para>Write the in-memory list of stored call stacks to a file. This
+      creates a new file.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-fail-on" xreflabel="FAILGRIND_SYSCALL_FAIL_ON">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_FAIL_ON</computeroutput>
+    </term>
+    <listitem>
+      <para>Enable syscall failures. Syscall failures are disabled by default
+      in Failgrind. Use in conjunction with
+      <option>--syscall-fail-atstart</option> to control which parts of
+      your program are tested by Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-fail-off" xreflabel="FAILGRIND_SYSCALL_FAIL_OFF">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_FAIL_OFF</computeroutput>
+    </term>
+    <listitem>
+      <para>Disable syscalls failures. When you have used this
+      request, Failgrind will not influence any syscalls.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-fail-toggle" xreflabel="FAILGRIND_SYSCALL_FAIL_TOGGLE">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_FAIL_TOGGLE</computeroutput>
+    </term>
+    <listitem>
+      <para>Toggle the enabled/disabled state of syscall failures.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-get-fail-count" xreflabel="FAILGRIND_SYSCALL_GET_FAIL_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_GET_FAIL_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of syscalls that have been failed by Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-get-new-callstack-count" xreflabel="FAILGRIND_SYSCALL_GET_NEW_CALLSTACK_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_GET_NEW_CALLSTACK_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of syscall callstacks that have not been seen
+      before. In the normal mode of operation this will be the same as
+      <option>FAILGRIND_SYSCALL_GET_NEW_CALLSTACK_COUNT</option>. If you use
+      <option>--syscall-fail-chance</option> or
+      <option>--syscall-max-fails</option> then this tells you the number
+      of syscalls that could have been failed, but may not have been. For
+      example, if you decide to set <option>--syscall-max-fails</option>,
+      then run a program that makes three different syscalls, you would
+      expect <option>FAILGRIND_SYSCALL_GET_FAIL_COUNT=1</option> and
+      <option>FAILGRIND_SYSCALL_GET_NEW_CALLSTACK_COUNT=3</option>. If this
+      client request returns 0, you know that all syscalls have been seen
+      before for this particular test.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.syscall-get-success-count" xreflabel="FAILGRIND_SYSCALL_GET_SUCCESS_COUNT">
+    <term>
+      <computeroutput>FAILGRIND_SYSCALL_GET_SUCCESS_COUNT</computeroutput>
+    </term>
+    <listitem>
+      <para>Return the count of syscalls that have succeeded through Failgrind.</para>
+    </listitem>
+  </varlistentry>
+
+  <varlistentry id="fg.zero-counts" xreflabel="FAILGRIND_ZERO_COUNTS">
+    <term>
+      <computeroutput>FAILGRIND_ZERO_COUNTS</computeroutput>
+    </term>
+    <listitem>
+      <para>Set the success/fail counts to zero.</para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+</sect2>
+
+<sect2 id="fg-manual.clientrequests.example" xreflabel="Client request example">
+<title>Example</title>
+
+<para>This example shows how you could use the Failgrind client requests to
+provide complete checking of a test suite compiled in the program
+<computeroutput>prog</computeroutput>.</para>
+
+<para>Run Failgrind as follows to disable memory allocation failures on
+startup, and to not read/write any callstack files:</para>
+<screen><![CDATA[
+valgrind --tool=exp-failgrind --alloc-fail-atstart=no --callstack-input=no --callstack-output=no prog
+]]></screen>
+
+<para>The program listing:</para>
+<programlisting><![CDATA[
+ 1      #include <failgrind.h>
+ 2      #include <test_funcs.h>
+ 3
+ 4      int main(int argc, char* argv[])
+ 5      {
+ 6         setup_test_suite();
+ 7
+ 8         do {
+ 9            FAILGRIND_ALLOC_ZERO_COUNTS;
+10            FAILGRIND_ALLOC_FAIL_ON;
+11            run_test1();
+12            FAILGRIND_ALLOC_FAIL_OFF;
+13         } while(FAILGRIND_ALLOC_GET_FAIL_COUNT > 0);
+14         FAILGRIND_CALLSTACK_CLEAR;
+15
+16         do {
+17            FAILGRIND_ZERO_COUNTS;
+18            FAILGRIND_ALLOC_FAIL_ON;
+19            run_test2();
+20            FAILGRIND_ALLOC_FAIL_OFF;
+21         } while(FAILGRIND_ALLOC_GET_FAIL_COUNT > 0);
+22         FAILGRIND_CALLSTACK_CLEAR;
+23
+24         cleanup_test_suite();
+25         return 0;
+26      }
+]]></programlisting>
+
+<para>Or with a helper function with a callback for the test to avoid code duplication:</para>
+<programlisting><![CDATA[
+ 1      #include <failgrind.h>
+ 2      #include <test_funcs.h>
+ 3
+ 4      void fg_test(void (*test)(void)){
+ 5         FAILGRIND_CALLSTACK_CLEAR;
+ 6         do {
+ 7            FAILGRIND_ZERO_COUNTS;
+ 8            FAILGRIND_ALLOC_FAIL_ON;
+ 9            test();
+10            FAILGRIND_ALLOC_FAIL_OFF;
+11         } while(FAILGRIND_ALLOC_GET_FAIL_COUNT > 0);
+12      }
+13
+14      int main(int argc, char* argv[])
+15      {
+16         setup_test_suite();
+17
+18         fg_test(run_test1);
+19         fg_test(run_test2);
+20
+21         cleanup_test_suite();
+22         return 0;
+23      }
+]]></programlisting>
+
+
+</sect2>
+</sect1>
+
+<sect1 id="fg-manual.errnos">
+<title>Syscall errors</title>
+<para>This section lists the different platform specific error values that can
+be used with the <option>--syscall-errno</option> option.</para>
+<sect2>
+<title>Linux</title>
+<para>
+<screen>
+E2BIG EACCES EAGAIN EBADF EBUSY ECHILD
+EDOM EEXIST EFAULT EFBIG EINTR EINVAL
+EIO EISDIR EMFILE EMLINK ENFILE ENODEV
+ENOENT ENOEXEC ENOMEM ENOSPC ENOSYS
+ENOTBLK ENOTDIR ENOTTY ENXIO EOVERFLOW
+EPERM EPIPE ERANGE EROFS ESPIPE ESRCH
+ETXTBSY EWOULDBLOCK EXDEV
+</screen>
+</para>
+</sect2>
+
+<sect2>
+<title>Mac OS X</title>
+<para>
+<screen>
+E2BIG EACCES EADDRINUSE EADDRNOTAVAIL
+EAFNOSUPPORT EAGAIN EALREADY EAUTH
+EBADARCH EBADEXEC EBADF EBADMACHO
+EBADMSG EBADRPC EBUSY ECANCELED ECHILD
+ECONNABORTED ECONNREFUSED ECONNRESET
+EDEADLK EDESTADDRREQ EDEVERR EDOM
+EDQUOT EEXIST EFAULT EFBIG EFTYPE
+EHOSTDOWN EHOSTUNREACH EIDRM EILSEQ
+EINPROGRESS EINTR EINVAL EIO EISCONN
+EISDIR ELAST ELOOP EMFILE EMLINK
+EMSGSIZE EMULTIHOP ENAMETOOLONG
+ENEEDAUTH ENETDOWN ENETRESET
+ENETUNREACH ENFILE ENOATTR ENOBUFS
+ENODATA ENODEV ENOENT ENOEXEC ENOLCK
+ENOLINK ENOMEM ENOMSG ENOPROTOOPT
+ENOSPC ENOSR ENOSTR ENOSYS ENOTBLK
+ENOTCONN ENOTDIR ENOTEMPTY ENOTSOCK
+ENOTSUP ENOTTY ENXIO EOPNOTSUPP
+EOVERFLOW EPERM EPFNOSUPPORT EPIPE
+EPROCLIM EPROCUNAVAIL EPROGMISMATCH
+EPROGUNAVAIL EPROTO EPROTONOSUPPORT
+EPROTOTYPE EPWROFF ERANGE EREMOTE
+EROFS ERPCMISMATCH ESHLIBVERS
+ESHUTDOWN ESOCKTNOSUPPORT ESPIPE
+ESRCH ESTALE ETIME ETIMEDOUT
+ETOOMANYREFS ETXTBSY EUSERS EXDEV
+</screen>
+
+</para>
+</sect2>
+
+<sect2>
+<title>Solaris</title>
+<para>
+<screen>
+E2BIG EACCES EADDRINUSE EAGAIN EBADF EBUSY
+ECHILD EDOM EEXIST EFAULT EFBIG EINTR
+EINVAL EIO EISDIR EMFILE EMLINK ENFILE
+ENODATA ENODEV ENOENT ENOEXEC ENOMEM
+ENOSPC ENOSYS ENOTBLK ENOTDIR ENOTSUP
+ENOTTY ENXIO EOVERFLOW EPERM EPIPE ERANGE
+ERESTART EROFS ESPIPE ESRCH ETXTBSY EXDEV
+</screen>
+</para>
+</sect2>
+
+</sect1>
+
+<sect1>
+<title>Limitations</title>
+
+<itemizedlist>
+  <listitem><para>Failgrind simply decides whether an allocation should
+  fail or succeed. It does not attempt to determine whether illegal memory
+  accesses occur after a memory allocation failure.</para></listitem>
+
+  <listitem><para>Call stack files are probably unique to the particular build
+  of an executable, so making changes could mean extensive
+  retesting.</para></listitem>
+</itemizedlist>
+</sect1>
+
+
+</chapter>

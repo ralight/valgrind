@@ -1,0 +1,2 @@
+prog: alloc_thresh_low
+vgopts: --callstack-output=no --show-failed=yes --alloc-threshold-low=100

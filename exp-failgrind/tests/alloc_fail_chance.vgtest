@@ -1,0 +1,2 @@
+prog: alloc_fail_chance
+vgopts: --callstack-output=no --show-failed=yes --seed=2 --alloc-fail-chance=50

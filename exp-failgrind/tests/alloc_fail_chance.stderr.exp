@@ -1,0 +1,14 @@
+Using random seed: 2
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_fail_chance.c:8)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_fail_chance.c:20)
+ Failgrind: 0 call stacks loaded from file
+            1 allocations succeeded
+            2 allocations failed
+            3 new allocation callstacks found
+            1 syscalls succeeded
+            0 syscalls failed
+            0 new syscall callstacks found

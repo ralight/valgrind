@@ -1,0 +1,110 @@
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+
+# ./alloc_input
+at 0x4840813: malloc (vg_replace_malloc.c:380)
+by 0x109181: f_a (alloc_input.c:20)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x109198: f_a (alloc_input.c:22)
+by 0x1091CB: main (alloc_input.c:31)
+

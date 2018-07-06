@@ -53,6 +53,7 @@ my %tool_dirs = (
     "none" => 1,
     "exp-bbv" => 1,
     "shared" => 1,
+    "exp-failgrind" => 1,
     );
 
 my %dirs_to_ignore = (

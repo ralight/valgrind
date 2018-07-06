@@ -212,6 +212,16 @@ system: <filename>&vg-docs-path;</filename>, or online:
 </refsect1>
 
 
+<refsect1 id="failgrind-options">
+<title>Failgrind Options</title>
+
+<xi:include href="../../exp-failgrind/docs/fg-manual.xml"
+            xpointer="fg.opts.list"
+            xmlns:xi="http://www.w3.org/2001/XInclude" />
+
+</refsect1>
+
+
 <refsect1 id="lackey-options">
 <title>Lackey Options</title>
 

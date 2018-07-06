@@ -1,0 +1,15 @@
+   at 0x........: open (open64.c:...)
+   by 0x........: main (syscall_errno_specific1.c:18)
+   at 0x........: socket (syscall-template.S:...)
+   by 0x........: main (syscall_errno_specific1.c:31)
+   at 0x........: _Exit (_exit.c:...)
+   by 0x........: __run_exit_handlers (exit.c:...)
+   by 0x........: exit (exit.c:...)
+   by 0x........: (below main)
+ Failgrind: 0 call stacks loaded from file
+            0 allocations succeeded
+            0 allocations failed
+            0 new allocation callstacks found
+            2 syscalls succeeded
+            3 syscalls failed
+            3 new syscall callstacks found

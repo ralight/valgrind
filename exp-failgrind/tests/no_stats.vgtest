@@ -1,0 +1,2 @@
+prog: no_stats
+vgopts: --callstack-output=no --show-failed=yes --failgrind-stats=no

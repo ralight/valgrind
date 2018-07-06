@@ -1,0 +1,2 @@
+prog: alloc_toggle_1
+vgopts: --callstack-output=no --show-failed=yes --alloc-toggle=testing

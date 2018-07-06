@@ -448,6 +448,51 @@
 /drd/tests/unit_vc
 /drd/tests/vg_regtest.tmp*
 
+# /exp-failgrind/
+/exp-failgrind/.deps
+/exp-failgrind/exp-failgrind-*-*
+/exp-failgrind/Makefile
+/exp-failgrind/Makefile.in
+/exp-failgrind/vgpreload_exp-failgrind-*-linux.so
+
+# /exp-failgrind/docs/
+/exp-failgrind/docs/Makefile
+/exp-failgrind/docs/Makefile.in
+
+# /exp-failgrind/tests/
+/exp-failgrind/tests/.deps
+/exp-failgrind/tests/Makefile
+/exp-failgrind/tests/Makefile.in
+/exp-failgrind/tests/*.stderr.diff*
+/exp-failgrind/tests/*.stderr.out
+/exp-failgrind/tests/*.stdout.diff*
+/exp-failgrind/tests/*.stdout.out
+/exp-failgrind/tests/alloc_atstart
+/exp-failgrind/tests/alloc_clreq1
+/exp-failgrind/tests/alloc_clreq2
+/exp-failgrind/tests/alloc_fail_chance
+/exp-failgrind/tests/alloc_input
+/exp-failgrind/tests/alloc_max_fails
+/exp-failgrind/tests/alloc_thresh_low
+/exp-failgrind/tests/alloc_thresh_high
+/exp-failgrind/tests/alloc_thresh_high_low
+/exp-failgrind/tests/alloc_thresh_low_invert
+/exp-failgrind/tests/alloc_thresh_high_invert
+/exp-failgrind/tests/alloc_thresh_high_low_invert1
+/exp-failgrind/tests/alloc_thresh_high_low_invert2
+/exp-failgrind/tests/alloc_toggle_1
+/exp-failgrind/tests/no_stats
+/exp-failgrind/tests/syscall_atstart
+/exp-failgrind/tests/syscall_atstart.callstacks
+/exp-failgrind/tests/syscall_errno
+/exp-failgrind/tests/syscall_errno.callstacks
+/exp-failgrind/tests/syscall_errno_specific1
+/exp-failgrind/tests/syscall_errno_specific1.callstacks
+/exp-failgrind/tests/syscall_errno_specific2
+/exp-failgrind/tests/syscall_toggle_1
+/exp-failgrind/tests/syscall_toggle_1.callstacks
+
+
 # /exp-bbv/
 /exp-bbv/*.dSYM
 /exp-bbv/.deps

@@ -1,0 +1,7 @@
+ Failgrind: 0 call stacks loaded from file
+            0 allocations succeeded
+            0 allocations failed
+            0 new allocation callstacks found
+            1 syscalls succeeded
+            0 syscalls failed
+            0 new syscall callstacks found

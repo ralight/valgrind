@@ -1,0 +1,2 @@
+prog: alloc_input
+vgopts: --callstack-input=alloc_input.callstacks --callstack-output=no --show-failed=yes

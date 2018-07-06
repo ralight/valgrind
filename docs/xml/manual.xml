@@ -44,5 +44,7 @@
       xmlns:xi="http://www.w3.org/2001/XInclude" />
   <xi:include href="../../exp-bbv/docs/bbv-manual.xml" parse="xml"  
       xmlns:xi="http://www.w3.org/2001/XInclude" />      
+  <xi:include href="../../exp-failgrind/docs/fg-manual.xml" parse="xml"
+      xmlns:xi="http://www.w3.org/2001/XInclude" />
 
 </book>
