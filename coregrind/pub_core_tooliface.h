@@ -143,7 +143,7 @@ typedef struct {
    Bool (*tool_handle_client_request)(ThreadId, UWord*, UWord*);
 
    // VG_(needs).syscall_wrapper
-   void (*tool_pre_syscall) (ThreadId, UInt, UWord*, UInt);
+   void (*tool_pre_syscall) (ThreadId, SyscallStatus*, UInt, UWord*, UInt);
    void (*tool_post_syscall)(ThreadId, UInt, UWord*, UInt, SysRes);
 
    // VG_(needs).sanity_checks

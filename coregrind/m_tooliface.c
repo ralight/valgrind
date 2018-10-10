@@ -298,7 +298,7 @@ void VG_(needs_client_requests)(
 }
 
 void VG_(needs_syscall_wrapper)(
-   void(*pre) (ThreadId, UInt, UWord*, UInt),
+   void(*pre) (ThreadId, SyscallStatus*, UInt, UWord*, UInt),
    void(*post)(ThreadId, UInt, UWord*, UInt, SysRes res)
 )
 {

@@ -423,6 +423,8 @@ extern void VG_(needs_client_requests) (
    Bool (*handle_client_request)(ThreadId tid, UWord* arg_block, UWord* ret)
 );
 
+typedef struct SyscallStatus SyscallStatus;
+
 /* Tool does stuff before and/or after system calls? */
 // Nb: If either of the pre_ functions malloc() something to return, the
 // corresponding post_ function had better free() it!
@@ -435,11 +437,14 @@ extern void VG_(needs_client_requests) (
 // to be defined and to contain all the args for this syscall,
 // possibly including some trailing zeroes.
 extern void VG_(needs_syscall_wrapper) (
-               void (* pre_syscall)(ThreadId tid, UInt syscallno,
+               void (* pre_syscall)(ThreadId tid, SyscallStatus *status, UInt syscallno,
                                     UWord* args, UInt nArgs),
                void (*post_syscall)(ThreadId tid, UInt syscallno,
                                     UWord* args, UInt nArgs, SysRes res)
 );
+
+/* Force a syscall to produce an error. Use within pre_syscall() */
+extern void VG_(force_syscall_error) (SyscallStatus *status, UWord err);
 
 /* Are tool-state sanity checks performed? */
 // Can be useful for ensuring a tool's correctness.  cheap_sanity_check()
