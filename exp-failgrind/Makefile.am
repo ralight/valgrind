@@ -95,3 +95,21 @@ vgpreload_exp_failgrind_@VGCONF_ARCH_SEC@_@VGCONF_OS@_so_LDFLAGS      = \
 	$(PRELOAD_LDFLAGS_@VGCONF_PLATFORM_SEC_CAPS@) \
 	$(LIBREPLACEMALLOC_LDFLAGS_@VGCONF_PLATFORM_SEC_CAPS@)
 endif
+
+bin_PROGRAMS = failgrind-helper
+
+failgrind_helper_SOURCES = failgrind-helper.c
+failgrind_helper_CPPFLAGS  = $(AM_CPPFLAGS_PRI)
+failgrind_helper_CFLAGS    = $(AM_CFLAGS_PRI)
+failgrind_helper_CCASFLAGS = $(AM_CCASFLAGS_PRI)
+failgrind_helper_LDFLAGS   = $(AM_CFLAGS_PRI)
+if VGCONF_PLATVARIANT_IS_ANDROID
+failgrind_helper_CFLAGS    += -static
+endif
+# If there is no secondary platform, and the platforms include x86-darwin,
+# then the primary platform must be x86-darwin.  Hence:
+if ! VGCONF_HAVE_PLATFORM_SEC
+if VGCONF_PLATFORMS_INCLUDE_X86_DARWIN
+failgrind_helper_LDFLAGS   += -Wl,-read_only_relocs -Wl,suppress
+endif
+endif

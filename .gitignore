@@ -574,6 +574,7 @@
 /exp-failgrind/exp-failgrind-*-linux
 /exp-failgrind/exp-failgrind-*-solaris
 /exp-failgrind/exp-failgrind-*-freebsd
+/exp-failgrind/failgrind-helper
 /exp-failgrind/Makefile
 /exp-failgrind/Makefile.in
 
