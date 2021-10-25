@@ -1740,7 +1740,7 @@ void collect_time (struct vki_timespec *systime, struct vki_timespec *syscputime
 }
 
 static
-void CLG_(pre_syscalltime)(ThreadId tid, UInt syscallno,
+void CLG_(pre_syscalltime)(ThreadId tid, SyscallStatus *status, UInt syscallno,
                            UWord* args, UInt nArgs)
 {
   collect_time(&syscalltime[tid],

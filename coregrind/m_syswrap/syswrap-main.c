@@ -2016,6 +2016,12 @@ static void ensure_initialised ( void )
    }
 }
 
+void VG_(force_syscall_error) (SyscallStatus *status, UWord err)
+{
+   status->what = SsComplete;
+   status->sres = VG_(mk_SysRes_Error)(err);
+}
+
 /* --- This is the main function of this file. --- */
 
 void VG_(client_syscall) ( ThreadId tid, UInt trc )
@@ -2025,6 +2031,7 @@ void VG_(client_syscall) ( ThreadId tid, UInt trc )
    const SyscallTableEntry* ent;
    SyscallArgLayout         layout;
    SyscallInfo*             sci;
+   SyscallStatus            pre_status;
 
    ensure_initialised();
 
@@ -2214,6 +2221,8 @@ void VG_(client_syscall) ( ThreadId tid, UInt trc )
    PRINT("SYSCALL[%d,%u](%s) ",
       VG_(getpid)(), tid, VG_SYSNUM_STRING(sysno));
 
+   pre_status.what = SsHandToKernel;
+   pre_status.sres = VG_(mk_SysRes_Error)(0);
    /* Do any pre-syscall actions */
    if (VG_(needs).syscall_wrapper) {
       UWord tmpv[8];
@@ -2225,7 +2234,7 @@ void VG_(client_syscall) ( ThreadId tid, UInt trc )
       tmpv[5] = sci->orig_args.arg6;
       tmpv[6] = sci->orig_args.arg7;
       tmpv[7] = sci->orig_args.arg8;
-      VG_TDICT_CALL(tool_pre_syscall, tid, sysno,
+      VG_TDICT_CALL(tool_pre_syscall, tid, &pre_status, sysno,
                     &tmpv[0], sizeof(tmpv)/sizeof(tmpv[0]));
    }
 
@@ -2235,6 +2244,13 @@ void VG_(client_syscall) ( ThreadId tid, UInt trc )
                   &layout, 
                   &sci->args, &sci->status, &sci->flags );
    
+   if (sci->status.what == SsHandToKernel) {
+      if (pre_status.what == SsComplete) {
+         /* Only override status if ent->before didn't modify status.what */
+         sci->status.what = SsComplete;
+         sci->status.sres = pre_status.sres;
+      }
+   }
    /* If needed, gdbserver will report syscall entry to GDB */
    VG_(gdbserver_report_syscall)(True, sysno, tid);
 
