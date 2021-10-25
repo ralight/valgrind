@@ -1,0 +1,2 @@
+prog: syscall_errno
+vgopts: --callstack-output=no --show-failed=yes --alloc-fail-atstart=no --syscall-fail-atstart=yes --syscall-errno=EACCES --syscall-allow=write --syscall-allow=_fxstat --syscall-allow=fstatat

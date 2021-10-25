@@ -1,0 +1,9 @@
+   at 0x........: open (open64.c:...)
+   by 0x........: main (syscall_errno_specific2.c:14)
+ Failgrind: 0 call stacks loaded from file
+            0 allocations succeeded
+            0 allocations failed
+            0 new allocation callstacks found
+            4 syscalls succeeded
+            1 syscalls failed
+            4 new syscall callstacks found

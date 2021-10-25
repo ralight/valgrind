@@ -1,0 +1,4 @@
+# ./syscall_errno_specific2
+at 0x4F42C8E: open (open64.c:47)
+by 0x1087DE: main (syscall_errno_specific2.c:14)
+

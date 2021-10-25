@@ -1,0 +1,47 @@
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_a (alloc_clreq2.c:9)
+   by 0x........: run_test1 (alloc_clreq2.c:60)
+   by 0x........: main (alloc_clreq2.c:80)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_b (alloc_clreq2.c:22)
+   by 0x........: run_test1 (alloc_clreq2.c:61)
+   by 0x........: main (alloc_clreq2.c:80)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_c (alloc_clreq2.c:35)
+   by 0x........: run_test1 (alloc_clreq2.c:62)
+   by 0x........: main (alloc_clreq2.c:80)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_d (alloc_clreq2.c:48)
+   by 0x........: run_test1 (alloc_clreq2.c:63)
+   by 0x........: main (alloc_clreq2.c:80)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_a (alloc_clreq2.c:9)
+   by 0x........: run_test2 (alloc_clreq2.c:68)
+   by 0x........: main (alloc_clreq2.c:92)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_b (alloc_clreq2.c:22)
+   by 0x........: run_test2 (alloc_clreq2.c:69)
+   by 0x........: main (alloc_clreq2.c:92)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_c (alloc_clreq2.c:35)
+   by 0x........: run_test2 (alloc_clreq2.c:70)
+   by 0x........: main (alloc_clreq2.c:92)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: f_d (alloc_clreq2.c:48)
+   by 0x........: run_test2 (alloc_clreq2.c:71)
+   by 0x........: main (alloc_clreq2.c:92)
+ Failgrind: 0 call stacks loaded from file
+            4 allocations succeeded
+            0 allocations failed
+            0 new allocation callstacks found
+            2 syscalls succeeded
+            0 syscalls failed
+            0 new syscall callstacks found

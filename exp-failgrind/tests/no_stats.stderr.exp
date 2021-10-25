@@ -1,0 +1,9 @@
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (no_stats.c:7)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (no_stats.c:12)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (no_stats.c:17)

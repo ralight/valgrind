@@ -5231,6 +5231,8 @@ AC_CONFIG_FILES([
    exp-bbv/tests/amd64-linux/Makefile
    exp-bbv/tests/ppc32-linux/Makefile
    exp-bbv/tests/arm-linux/Makefile
+   exp-failgrind/Makefile
+   exp-failgrind/tests/Makefile
    shared/Makefile
    solaris/Makefile
 ])

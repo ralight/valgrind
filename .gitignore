@@ -567,6 +567,21 @@
 /exp-bbv/tests/x86-linux/Makefile
 /exp-bbv/tests/x86-linux/Makefile.in
 
+# /exp-failgrind/
+/exp-failgrind/*.so
+/exp-failgrind/.deps
+/exp-failgrind/exp-failgrind-*-darwin
+/exp-failgrind/exp-failgrind-*-linux
+/exp-failgrind/exp-failgrind-*-solaris
+/exp-failgrind/exp-failgrind-*-freebsd
+/exp-failgrind/Makefile
+/exp-failgrind/Makefile.in
+
+# /exp-failgrind/tests/
+/exp-failgrind/tests/.deps
+/exp-failgrind/tests/Makefile
+/exp-failgrind/tests/Makefile.in
+
 # /gdbserver_tests/
 /gdbserver_tests/*.dSYM
 /gdbserver_tests/*.diff*

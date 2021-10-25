@@ -1,0 +1,2 @@
+prog: syscall_errno_specific2
+vgopts: --callstack-output=no --show-failed=yes --alloc-fail-atstart=no --syscall-fail-atstart=yes --syscall-errno=open,EACCES --syscall-specified-only=yes

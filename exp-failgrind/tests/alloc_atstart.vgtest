@@ -1,0 +1,2 @@
+prog: alloc_atstart
+vgopts: --callstack-output=no --show-failed=yes --alloc-fail-atstart=no

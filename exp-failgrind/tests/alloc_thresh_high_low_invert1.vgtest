@@ -1,0 +1,2 @@
+prog: alloc_thresh_high_low_invert1
+vgopts: --callstack-output=no --show-failed=yes --alloc-threshold-high=100 --alloc-threshold-low=100 --alloc-threshold-invert=yes

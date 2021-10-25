@@ -1,0 +1,24 @@
+#! /bin/sh
+
+dir=`dirname $0`
+
+$dir/../../tests/filter_stderr_basic                |
+
+# Anonymise addresses
+$dir/../../tests/filter_addresses                   |
+
+# Remove blank lines
+sed -e "/^$/d" |
+
+# Remove non-application line numbers
+sed \
+   -e "s/exit.c:[0-9]\+)/exit.c:...)/g" \
+   -e "s/open64.c:[0-9]\+)/open64.c:...)/g" \
+   -e "s/syscall-template.S:[0-9]\+)/syscall-template.S:...)/g" \
+   |
+
+# Remove "Failgrind, ..." line and the following experimental line and copyright line.
+sed \
+-e "/^Failgrind, a memory allocation and syscall failure testing tool$/d" \
+-e "/^NOTE: This is an Experimental-Class Valgrind Tool$/d"  \
+-e "/^Copyright (C) [0-9]*-*[0-9]*, and GNU GPL'd, by Roger Light.$/d"

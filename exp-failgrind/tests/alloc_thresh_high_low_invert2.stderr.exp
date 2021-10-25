@@ -1,0 +1,19 @@
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_thresh_high_low_invert2.c:8)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_thresh_high_low_invert2.c:14)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_thresh_high_low_invert2.c:26)
+Heap memory failure
+   at 0x........: malloc (vg_replace_malloc.c:...)
+   by 0x........: main (alloc_thresh_high_low_invert2.c:32)
+ Failgrind: 0 call stacks loaded from file
+            1 allocations succeeded
+            4 allocations failed
+            4 new allocation callstacks found
+            1 syscalls succeeded
+            0 syscalls failed
+            0 new syscall callstacks found

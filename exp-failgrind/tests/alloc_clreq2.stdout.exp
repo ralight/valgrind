@@ -1,0 +1,10 @@
+Test 1 success count: 3, new callstack count: 4
+Test 1 success count: 3, new callstack count: 3
+Test 1 success count: 3, new callstack count: 2
+Test 1 success count: 3, new callstack count: 1
+Test 1 success count: 4, new callstack count: 0
+Test 2 success count: 0, new callstack count: 1
+Test 2 success count: 1, new callstack count: 1
+Test 2 success count: 2, new callstack count: 1
+Test 2 success count: 3, new callstack count: 1
+Test 2 success count: 4, new callstack count: 0

@@ -1,0 +1,2 @@
+prog: syscall_errno_specific1
+vgopts: --callstack-input=no --callstack-output=no --syscall-allow=write --syscall-allow=_fxstat --syscall-allow=fstatat --show-failed=yes --alloc-fail-atstart=no --syscall-fail-atstart=yes --syscall-errno=open,EPIPE

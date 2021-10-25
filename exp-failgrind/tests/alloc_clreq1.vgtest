@@ -1,0 +1,2 @@
+prog: alloc_clreq1
+vgopts: --callstack-output=no --show-failed=yes

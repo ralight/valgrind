@@ -1,0 +1,2 @@
+prog: syscall_atstart
+vgopts: --callstack-input=no --callstack-output=no --show-failed=yes --alloc-fail-atstart=no --syscall-fail-atstart=yes --syscall-allow=write --syscall-allow=_fxstat --syscall-allow=fstatat
